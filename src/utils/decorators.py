@@ -26,6 +26,12 @@ class CommandLocation(StrEnum):
     DM = "dm"
 
 
+class AppEnvironment(StrEnum):
+    PROD = "prod"
+    DEV = "dev"
+    LOCAL = "local"
+
+
 class FunctionalRole(StrEnum):
     ADMIN = "ADMIN"
     MOD = "MOD"
@@ -197,6 +203,33 @@ def requires_roles(
                 await _send_rejection(ctx_or_interaction, rejection_message, ephemeral=ephemeral)
                 return None
 
+            return await func(*args, **kwargs)
+
+        _propagate_defer_ephemeral(wrapper, func)
+        return wrapper
+
+    return decorator
+
+
+def requires_env(
+    *envs: AppEnvironment,
+    message: str | None = None,
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R | None]]]:
+    """Require the bot to be running in one of the given environments.
+
+    Slash/prefix commands get a rejection reply. Cog listeners return silently.
+    """
+    allowed = {env.value for env in envs}
+    rejection_message = message or "This command is not available in this environment."
+
+    def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R | None]]:
+        @functools.wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
+            config: Config = args[0].client.config  # type: ignore[attr-defined, union-attr]
+            if config.env not in allowed:
+                if len(args) >= 2 and isinstance(args[1], discord.Interaction | commands.Context):
+                    await _send_rejection(args[1], rejection_message, ephemeral=_get_ephemeral())
+                return None
             return await func(*args, **kwargs)
 
         _propagate_defer_ephemeral(wrapper, func)

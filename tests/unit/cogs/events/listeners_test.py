@@ -11,8 +11,6 @@ from src.cogs.events.listeners import EventListeners
 from src.data.mongo import Link, Student
 
 if TYPE_CHECKING:
-    import pytest
-
     from tests.conftest import MemberFactory
 
 
@@ -26,6 +24,16 @@ async def test_on_member_join_unlinked_record_deleted(mock_bot: MagicMock, membe
     await listeners.on_member_join(member)
     member.add_roles.assert_awaited_with(mock_bot.config.just_joined_role)
     mock_bot.stores.links.delete_one.assert_awaited_once_with(id=link.id)
+
+
+async def test_on_member_join_skips_non_prod(mock_bot: MagicMock, member_factory: MemberFactory) -> None:
+    listeners = EventListeners()
+    listeners.client = mock_bot
+    mock_bot.config.env = "dev"
+    mock_bot.stores.links.find_one = AsyncMock()
+    await listeners.on_member_join(member_factory(user_id=7))
+    mock_bot.stores.links.find_one.assert_not_called()
+    mock_bot.config.bot_logs_channel.send.assert_not_called()
 
 
 async def test_on_member_join_missing_student(
@@ -73,6 +81,16 @@ async def test_on_member_remove_keeps_complete_link(mock_bot: MagicMock, member_
     mock_bot.stores.links.delete_one.assert_not_called()
 
 
+async def test_on_member_remove_skips_non_prod(mock_bot: MagicMock, member_factory: MemberFactory) -> None:
+    listeners = EventListeners()
+    listeners.client = mock_bot
+    mock_bot.config.env = "local"
+    mock_bot.stores.links.find_one = AsyncMock()
+    await listeners.on_member_remove(member_factory(user_id=55))
+    mock_bot.stores.links.find_one.assert_not_called()
+    mock_bot.config.bot_logs_channel.send.assert_not_called()
+
+
 async def test_on_message_ignores_bots(mock_bot: MagicMock) -> None:
     listeners = EventListeners()
     listeners.client = mock_bot
@@ -81,10 +99,9 @@ async def test_on_message_ignores_bots(mock_bot: MagicMock) -> None:
     await listeners.on_message(message)
 
 
-async def test_on_message_ec_campus_reply(mock_bot: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_on_message_ec_campus_reply(mock_bot: MagicMock) -> None:
     listeners = EventListeners()
     listeners.client = mock_bot
-    monkeypatch.setenv("APP_ENV", "prod")
     message = MagicMock(spec=discord.Message)
     message.author.bot = False
     message.content = "anyone at EC campus?"
@@ -102,10 +119,10 @@ async def test_on_message_ec_campus_reply(mock_bot: MagicMock, monkeypatch: pyte
     message.channel.send.assert_awaited()
 
 
-async def test_on_message_skips_non_prod(mock_bot: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_on_message_skips_non_prod(mock_bot: MagicMock) -> None:
     listeners = EventListeners()
     listeners.client = mock_bot
-    monkeypatch.setenv("APP_ENV", "local")
+    mock_bot.config.env = "local"
     message = MagicMock(spec=discord.Message)
     message.author.bot = False
     message.content = "ec campus"
@@ -114,10 +131,9 @@ async def test_on_message_skips_non_prod(mock_bot: MagicMock, monkeypatch: pytes
     message.reply.assert_not_called()
 
 
-async def test_on_message_skips_when_random_misses(mock_bot: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_on_message_skips_when_random_misses(mock_bot: MagicMock) -> None:
     listeners = EventListeners()
     listeners.client = mock_bot
-    monkeypatch.setenv("APP_ENV", "prod")
     message = MagicMock(spec=discord.Message)
     message.author.bot = False
     message.content = "ec campus"
@@ -127,10 +143,9 @@ async def test_on_message_skips_when_random_misses(mock_bot: MagicMock, monkeypa
     message.reply.assert_not_called()
 
 
-async def test_on_message_skips_without_ec_pattern(mock_bot: MagicMock, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_on_message_skips_without_ec_pattern(mock_bot: MagicMock) -> None:
     listeners = EventListeners()
     listeners.client = mock_bot
-    monkeypatch.setenv("APP_ENV", "prod")
     message = MagicMock(spec=discord.Message)
     message.author.bot = False
     message.content = "hello world"

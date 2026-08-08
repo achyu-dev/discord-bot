@@ -40,6 +40,7 @@ class GeneralCommands(GeneralHelpers):
         password="PESU Academy password",
     )
     @bot_decorators.defer(ephemeral=True)
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     @bot_decorators.requires_location(bot_decorators.CommandLocation.GUILD)
     @bot_decorators.requires_roles(
         bot_decorators.FunctionalRole.LINKED,

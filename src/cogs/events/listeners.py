@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import random
 import re
 from typing import TYPE_CHECKING
@@ -10,6 +9,7 @@ import discord
 from discord.ext import commands
 
 from src.cogs.events.helpers import EventHelpers
+from src.utils import decorators as bot_decorators
 from src.utils.general import build_embed
 
 if TYPE_CHECKING:
@@ -20,6 +20,7 @@ class EventListeners(EventHelpers):
     client: DiscordBot
 
     @commands.Cog.listener()
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     async def on_member_join(self, member: discord.Member) -> None:
         bot_logs = self.client.config.bot_logs_channel
         just_joined = self.client.config.just_joined_role
@@ -57,6 +58,7 @@ class EventListeners(EventHelpers):
             await self.client.stores.links.delete_one(id=link_record.id)
 
     @commands.Cog.listener()
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     async def on_member_remove(self, member: discord.Member) -> None:
         bot_logs = self.client.config.bot_logs_channel
         await bot_logs.send(f"{member.mention} Left!!")
@@ -68,11 +70,12 @@ class EventListeners(EventHelpers):
             await bot_logs.send(f"Linked record of {member.mention} has been deleted.!")
 
     @commands.Cog.listener()
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot:
             return
 
-        if os.getenv("APP_ENV") == "prod" and random.random() <= 0.2:  # 20% chance and prod deployment
+        if random.random() <= 0.2:  # 20% chance
             # Special EC Campus keyword patterns. Only check for words, not internal matches
             patterns = [r"\becc\b", r"\bec campus\b", r"\bec\b"]
             # Normalize message content to handle case insensitive matches

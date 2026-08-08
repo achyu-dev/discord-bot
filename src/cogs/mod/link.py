@@ -49,6 +49,7 @@ class LinkCommands:
     @ModGroups.mod_link.command(name="disconnect", description="Disconnect a user's PESU account from Discord")
     @app_commands.describe(user="User to disconnect")
     @bot_decorators.defer(ephemeral=False)
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     @bot_decorators.requires_location(bot_decorators.CommandLocation.GUILD)
     @bot_decorators.requires_roles(bot_decorators.FunctionalRole.ADMIN, bot_decorators.FunctionalRole.MOD)
     @bot_decorators.handle_command_errors(

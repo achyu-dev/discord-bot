@@ -133,7 +133,7 @@ def fake_config(functional_roles: dict[str, MagicMock]) -> MagicMock:
 
     config = MagicMock()
     config.guild_id = Config.GUILD_ID
-    config.env = "local"
+    config.env = "prod"
     config.db_name = "pesu_v2_test"
     config.guild_object = discord.Object(id=Config.GUILD_ID)
     config.BRANCH_SHORT_CODES = Config.BRANCH_SHORT_CODES
