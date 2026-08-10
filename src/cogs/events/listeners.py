@@ -150,7 +150,7 @@ class EventListeners(EventHelpers):
         await ug.send_dm_safely(member, embed=dm_embed)
 
         if self.HONEYPOT_ACTION == "ban":
-            await member.ban(delete_message_days=0, reason=reason)
+            await member.ban(delete_message_seconds=0, reason=reason)
             return "Banned"
 
         until = discord.utils.utcnow() + timedelta(hours=24)
