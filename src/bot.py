@@ -48,6 +48,8 @@ class DiscordBot(commands.Bot):
             if cert_path:
                 client_kwargs["tls"] = True
                 client_kwargs["tlsCertificateKeyFile"] = cert_path
+                client_kwargs["authSource"] = "$external"
+                client_kwargs["authMechanism"] = "MONGODB-X509"
             self.mongo = AsyncMongoClient(os.environ["MONGO_URI"], **client_kwargs)
             db = self.mongo[self.config.db_name]
             self.stores = await Stores.create(db)

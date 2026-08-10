@@ -84,10 +84,7 @@ async def test_bot_init_db_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
 async def test_bot_init_db_x509(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "local")
-    monkeypatch.setenv(
-        "MONGO_URI",
-        "mongodb+srv://example.mongodb.net/?authSource=$external&authMechanism=MONGODB-X509",
-    )
+    monkeypatch.setenv("MONGO_URI", "mongodb+srv://example.mongodb.net/")
     monkeypatch.setenv("MONGO_X509_CERT_PATH", "/run/secrets/mongo.pem")
 
     def _fake_collection(_name: str) -> MagicMock:
@@ -106,10 +103,12 @@ async def test_bot_init_db_x509(monkeypatch: pytest.MonkeyPatch) -> None:
         bot = DiscordBot()
         await bot.init_db()
         client_cls.assert_called_once_with(
-            "mongodb+srv://example.mongodb.net/?authSource=$external&authMechanism=MONGODB-X509",
+            "mongodb+srv://example.mongodb.net/",
             tz_aware=True,
             tls=True,
             tlsCertificateKeyFile="/run/secrets/mongo.pem",
+            authSource="$external",
+            authMechanism="MONGODB-X509",
         )
         assert bot.mongo is fake_client
 
