@@ -43,7 +43,12 @@ class DiscordBot(commands.Bot):
     async def init_db(self) -> None:
         """Connect to MongoDB and wire up typed collection stores."""
         try:
-            self.mongo = AsyncMongoClient(os.environ["MONGO_URI"], tz_aware=True)
+            client_kwargs: dict[str, object] = {"tz_aware": True}
+            cert_path = os.environ.get("MONGO_X509_CERT_PATH")
+            if cert_path:
+                client_kwargs["tls"] = True
+                client_kwargs["tlsCertificateKeyFile"] = cert_path
+            self.mongo = AsyncMongoClient(os.environ["MONGO_URI"], **client_kwargs)
             db = self.mongo[self.config.db_name]
             self.stores = await Stores.create(db)
             self.logger.info(f"Connected to MongoDB ({self.config.db_name})")

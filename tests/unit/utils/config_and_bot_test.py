@@ -56,6 +56,7 @@ def test_config_guild_missing() -> None:
 async def test_bot_init_db_success(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "local")
     monkeypatch.setenv("MONGO_URI", "mongodb://example")
+    monkeypatch.delenv("MONGO_X509_CERT_PATH", raising=False)
 
     def _fake_collection(_name: str) -> MagicMock:
         coll = MagicMock()
@@ -67,17 +68,50 @@ async def test_bot_init_db_success(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_client = MagicMock()
     fake_client.__getitem__ = MagicMock(return_value=fake_db)
 
-    with patch("src.bot.AsyncMongoClient", return_value=fake_client):
+    with patch("src.bot.AsyncMongoClient", return_value=fake_client) as client_cls:
         from src.bot import DiscordBot
 
         bot = DiscordBot()
         await bot.init_db()
+        client_cls.assert_called_once_with("mongodb://example", tz_aware=True)
         assert bot.mongo is fake_client
         assert bot.stores is not None
         assert bot.stores.links is not None
         assert bot.stores.mutes is not None
         assert bot.stores.anon_bans is not None
         assert bot.stores.anon_mutes is not None
+
+
+async def test_bot_init_db_x509(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "local")
+    monkeypatch.setenv(
+        "MONGO_URI",
+        "mongodb+srv://example.mongodb.net/?authSource=$external&authMechanism=MONGODB-X509",
+    )
+    monkeypatch.setenv("MONGO_X509_CERT_PATH", "/run/secrets/mongo.pem")
+
+    def _fake_collection(_name: str) -> MagicMock:
+        coll = MagicMock()
+        coll.create_index = AsyncMock(return_value="idx")
+        return coll
+
+    fake_db = MagicMock()
+    fake_db.__getitem__ = MagicMock(side_effect=_fake_collection)
+    fake_client = MagicMock()
+    fake_client.__getitem__ = MagicMock(return_value=fake_db)
+
+    with patch("src.bot.AsyncMongoClient", return_value=fake_client) as client_cls:
+        from src.bot import DiscordBot
+
+        bot = DiscordBot()
+        await bot.init_db()
+        client_cls.assert_called_once_with(
+            "mongodb+srv://example.mongodb.net/?authSource=$external&authMechanism=MONGODB-X509",
+            tz_aware=True,
+            tls=True,
+            tlsCertificateKeyFile="/run/secrets/mongo.pem",
+        )
+        assert bot.mongo is fake_client
 
 
 async def test_bot_init_db_failure(monkeypatch: pytest.MonkeyPatch) -> None:

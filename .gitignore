@@ -134,3 +134,6 @@ dmypy.json
 
 .vscode/
 .ssh/
+
+# Misc files
+scratch/
