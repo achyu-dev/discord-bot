@@ -10,12 +10,13 @@ import respx
 
 from src.cogs.general.commands import GeneralCommands
 from src.cogs.general.helpers import ONBOARDING_CHECKLIST, GeneralHelpers, LinkMessage
+from src.utils.config import Config
 from tests.helpers import get_callback
 
 if TYPE_CHECKING:
-    import pytest
-
     from tests.conftest import InteractionFactory, MemberFactory
+
+ASKPESU_API = Config.ASKPESU_API
 
 
 async def test_link_invokes_orchestration(
@@ -276,10 +277,7 @@ async def test_pride_no_link(mock_bot: MagicMock, interaction_factory: Interacti
     assert any("tenor.com" in (c.kwargs.get("content") or "") for c in interaction.followup.send.await_args_list)
 
 
-async def test_ask_exception(
-    mock_bot: MagicMock, interaction_factory: InteractionFactory, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("ASKPESU_API", "https://askpesu.test/api")
+async def test_ask_exception(mock_bot: MagicMock, interaction_factory: InteractionFactory) -> None:
     cmd = GeneralCommands()
     cmd.client = mock_bot
     interaction = interaction_factory()
@@ -358,32 +356,26 @@ async def test_get_data_caches(mock_bot: MagicMock) -> None:
 
 
 @respx.mock
-async def test_ask_empty_answer_chunk(
-    mock_bot: MagicMock, interaction_factory: InteractionFactory, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_ask_empty_answer_chunk(mock_bot: MagicMock, interaction_factory: InteractionFactory) -> None:
     from httpx import Response
 
-    monkeypatch.setenv("ASKPESU_API", "https://askpesu.test/api")
     cmd = GeneralCommands()
     cmd.client = mock_bot
     interaction = interaction_factory()
-    respx.post("https://askpesu.test/api").mock(return_value=Response(200, json={"answer": "\n\n"}))
+    respx.post(ASKPESU_API).mock(return_value=Response(200, json={"answer": "\n\n"}))
     await get_callback(cmd.ask)(cmd, interaction, "q")
     interaction.followup.send.assert_awaited()
 
 
 @respx.mock
-async def test_ask_splits_long_answer_into_chunks(
-    mock_bot: MagicMock, interaction_factory: InteractionFactory, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_ask_splits_long_answer_into_chunks(mock_bot: MagicMock, interaction_factory: InteractionFactory) -> None:
     from httpx import Response
 
-    monkeypatch.setenv("ASKPESU_API", "https://askpesu.test/api")
     cmd = GeneralCommands()
     cmd.client = mock_bot
     interaction = interaction_factory()
     long_answer = "\n".join(["x" * 1500, "y" * 1500])
-    respx.post("https://askpesu.test/api").mock(return_value=Response(200, json={"answer": long_answer}))
+    respx.post(ASKPESU_API).mock(return_value=Response(200, json={"answer": long_answer}))
     await get_callback(cmd.ask)(cmd, interaction, "q")
     embeds = interaction.followup.send.await_args.kwargs["embeds"]
     assert len(embeds) >= 2
@@ -403,8 +395,9 @@ async def test_selfmute_default_duration(
     await get_callback(cmd.selfmute)(cmd, interaction, None)
     member.add_roles.assert_awaited_with(mock_bot.config.muted_role, reason="")
     mute_record = mock_bot.stores.mutes.insert_one.await_args.args[0]
-    assert mute_record.duration_seconds == 3600
-    assert mute_record.is_self_mute is True
+    assert mute_record.discord_user_id == "5"
+    assert mute_record.moderator_discord_user_id == "5"
+    assert (mute_record.original_unmute_time - mute_record.mute_time).total_seconds() == 3600
     assert mute_record.reason == ""
     mock_bot.config.mod_logs_channel.send.assert_awaited()
 
@@ -422,8 +415,9 @@ async def test_selfmute_custom_duration(
 
     await get_callback(cmd.selfmute)(cmd, interaction, "2h", "studying")
     mute_record = mock_bot.stores.mutes.insert_one.await_args.args[0]
-    assert mute_record.duration_seconds == 7200
-    assert mute_record.is_self_mute is True
+    assert mute_record.discord_user_id == "5"
+    assert mute_record.moderator_discord_user_id == "5"
+    assert (mute_record.original_unmute_time - mute_record.mute_time).total_seconds() == 7200
     assert mute_record.reason == "studying"
 
 

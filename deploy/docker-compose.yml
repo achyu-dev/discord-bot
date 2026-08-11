@@ -5,3 +5,8 @@ services:
     restart: always
     env_file:
       - ${ENV_FILE:-.env}
+    environment:
+      APP_ENV: ${TARGET_ENV:-local}
+      MONGO_X509_CERT_PATH: /run/secrets/mongo.pem
+    volumes:
+      - /srv/discord_bot/certs/mongo-${TARGET_ENV}.pem:/run/secrets/mongo.pem:ro

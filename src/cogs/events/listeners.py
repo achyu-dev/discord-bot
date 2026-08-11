@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import random
 import re
 from datetime import timedelta
@@ -11,6 +10,7 @@ import discord
 from discord.ext import commands
 
 from src.cogs.events.helpers import EventHelpers
+from src.utils import decorators as bot_decorators
 from src.utils import general as ug
 from src.utils.general import build_embed
 
@@ -93,12 +93,13 @@ class EventListeners(EventHelpers):
         await banner.edit(embed=self._build_fafo_banner(), view=view)
 
     @commands.Cog.listener()
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     async def on_member_join(self, member: discord.Member) -> None:
         bot_logs = self.client.config.bot_logs_channel
         just_joined = self.client.config.just_joined_role
         await bot_logs.send(f"{member.mention} Joined!!")
 
-        link_record = await self.client.stores.links.find_one(user_id=str(member.id))
+        link_record = await self.client.stores.links.find_one(discord_user_id=str(member.id))
         roles_to_add = [just_joined]
         should_delete_link = bool(link_record and not link_record.linked_at)
 
@@ -108,8 +109,8 @@ class EventListeners(EventHelpers):
                 roles_to_add = []
                 for value in (
                     student_record.year,
-                    student_record.branch.short,
-                    student_record.campus.short,
+                    student_record.branch_short,
+                    student_record.campus,
                 ):
                     if not value:
                         continue
@@ -130,11 +131,12 @@ class EventListeners(EventHelpers):
             await self.client.stores.links.delete_one(id=link_record.id)
 
     @commands.Cog.listener()
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     async def on_member_remove(self, member: discord.Member) -> None:
         bot_logs = self.client.config.bot_logs_channel
         await bot_logs.send(f"{member.mention} Left!!")
 
-        link_record = await self.client.stores.links.find_one(user_id=str(member.id))
+        link_record = await self.client.stores.links.find_one(discord_user_id=str(member.id))
 
         if link_record and link_record.linked_at is None and link_record.id is not None:
             await self.client.stores.links.delete_one(id=link_record.id)
@@ -160,59 +162,12 @@ class EventListeners(EventHelpers):
         return "Timed out & Kicked"
 
     @commands.Cog.listener()
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot:
             return
 
-        # Honeypot detection and action
-        if message.channel.id == self.client.config.honeypot_channel.id and isinstance(message.author, discord.Member):
-            try:
-                await message.delete()
-            except (discord.Forbidden, discord.NotFound):
-                pass
-
-            # Keep existing moderation guardrails (admin/mod/bots protected)
-            target_error = ug.mod_target_error(message.author, self.client.config)
-            if target_error is not None:
-                await self.client.config.mod_logs_channel.send(
-                    f"Honeypot triggered by protected user {message.author.mention}; skipped auto-action. "
-                    f"Reason: {target_error}"
-                )
-                return
-
-            try:
-                action_text = await self._apply_honeypot_action(message.author, message)
-                await self._update_fafo_banner()
-
-                trap_embed = build_embed(
-                    title="Honeypot Triggered",
-                    color=discord.Color.red(),
-                    timestamp=discord.utils.utcnow(),
-                    description=f"{message.author.mention} got trapped in {message.channel.mention}",
-                    fields=[
-                        {"name": "Action", "value": action_text, "inline": True},
-                        {
-                            "name": "Message",
-                            "value": message.content if message.content else "*No content*",
-                            "inline": False,
-                        },
-                    ],
-                )
-                await self.client.config.mod_logs_channel.send(embed=trap_embed)
-
-            except discord.Forbidden:
-                await self.client.config.mod_logs_channel.send(
-                    f"Failed honeypot action for {message.author.mention}: "
-                    "missing permissions/role hierarchy "
-                    "(kick/ban/timeout and/or FAFO banner update)."
-                )
-            except discord.HTTPException as exc:
-                await self.client.config.mod_logs_channel.send(
-                    f"Failed honeypot action for {message.author.mention}: {exc}"
-                )
-            return
-
-        if os.getenv("APP_ENV") == "prod" and random.random() <= 0.2:  # 20% chance and prod deployment
+        if random.random() <= 0.2:  # 20% chance and prod deployment
             # Special EC Campus keyword patterns. Only check for words, not internal matches
             patterns = [r"\becc\b", r"\bec campus\b", r"\bec\b"]
             # Normalize message content to handle case insensitive matches

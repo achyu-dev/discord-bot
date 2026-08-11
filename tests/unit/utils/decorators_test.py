@@ -168,6 +168,46 @@ async def test_requires_roles_forbid_allows_when_absent(
         assert await handler(_Cog(mock_bot), interaction) == "ok"
 
 
+async def test_requires_env_rejects_wrong_env(mock_bot: MagicMock, interaction_factory: InteractionFactory) -> None:
+    mock_bot.config.env = bot_decorators.AppEnvironment.DEV
+    interaction = interaction_factory()
+
+    @bot_decorators.defer(ephemeral=True)
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
+    async def handler(self: _Cog, interaction: discord.Interaction) -> str:
+        return "ok"
+
+    assert await handler(_Cog(mock_bot), interaction) is None
+    interaction.followup.send.assert_awaited()
+    assert "not available" in interaction.followup.send.await_args.kwargs["content"]
+
+
+async def test_requires_env_allows_matching_env(mock_bot: MagicMock, interaction_factory: InteractionFactory) -> None:
+    mock_bot.config.env = bot_decorators.AppEnvironment.PROD
+    interaction = interaction_factory()
+
+    @bot_decorators.defer(ephemeral=True)
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
+    async def handler(self: _Cog, interaction: discord.Interaction) -> str:
+        return "ok"
+
+    assert await handler(_Cog(mock_bot), interaction) == "ok"
+
+
+async def test_requires_env_listener_returns_silently(mock_bot: MagicMock, member_factory: MemberFactory) -> None:
+    mock_bot.config.env = bot_decorators.AppEnvironment.DEV
+    called = False
+
+    @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
+    async def handler(self: _Cog, member: discord.Member) -> str:
+        nonlocal called
+        called = True
+        return "ok"
+
+    assert await handler(_Cog(mock_bot), member_factory()) is None
+    assert called is False
+
+
 async def test_handle_command_errors_catches(mock_bot: MagicMock, interaction_factory: InteractionFactory) -> None:
     interaction = interaction_factory()
 

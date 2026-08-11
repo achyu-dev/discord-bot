@@ -44,8 +44,11 @@ deploy leaves the dev environment untouched.
 
 ## Host layout
 
-- `/srv/discord_bot/docker-compose.yml` — compose file
+- `/srv/discord_bot/docker-compose.yml` — compose file (`APP_ENV` comes from
+  `TARGET_ENV` passed to `deploy_runner.sh`)
 - `/srv/discord_bot/.env.<env>` — runtime secrets per environment (`.env.dev`, `.env.prod`)
+- `/srv/discord_bot/certs/mongo-<env>.pem` — Atlas X.509 client certs (`mongo-dev.pem`,
+  `mongo-prod.pem`); root-owned mode `600`, mounted read-only into the container
 - `/etc/discord_bot/deploy.env` — non-secret config (`REPO_OWNER`, `DOCKER_IMAGE_NAME`)
 - `/usr/local/bin/deploy_runner.sh` — the runner, executed as root
 

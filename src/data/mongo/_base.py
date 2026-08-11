@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from bson import ObjectId
+from pymongo import ReplaceOne
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Mapping
 
     from pymongo.asynchronous.collection import AsyncCollection
     from pymongo.results import DeleteResult, InsertOneResult, UpdateResult
+
+IndexKeys = Sequence[tuple[str, int]]
+IndexSpec = tuple[IndexKeys, dict[str, Any]]
 
 
 def omit_none(doc: dict[str, Any]) -> dict[str, Any]:
@@ -33,9 +38,20 @@ class TypedCollection[ModelT]:
 
     model: type[ModelT]
     field_map: ClassVar[dict[str, str]]
+    indexes: ClassVar[list[IndexSpec]] = []
+    # When True, Stores also binds ``archive.<name>`` with the same store class.
+    # Overridden to False on archive twin instances.
+    has_archive: bool = False
 
     def __init__(self, collection: AsyncCollection) -> None:
         self._collection = collection
+        # Set by Stores._bind when ``has_archive`` is True on the hot store.
+        self.archive: TypedCollection[Any] | None = None
+
+    @property
+    def name(self) -> str:
+        """Underlying MongoDB collection name."""
+        return self._collection.name
 
     def _mongo_key(self, field: str) -> str:
         try:
@@ -52,6 +68,38 @@ class TypedCollection[ModelT]:
             msg = "At least one equality filter field is required"
             raise TypeError(msg)
         return self._to_mongo(eq)
+
+    async def ensure_indexes(self) -> None:
+        """Create declared indexes (idempotent when name/keys match)."""
+        for keys, options in self.indexes:
+            await self._collection.create_index(list(keys), **options)
+
+    async def replace_upsert_into(
+        self,
+        dest: TypedCollection[Any],
+        *,
+        batch_size: int = 500,
+    ) -> int:
+        """Copy every document into ``dest``, replacing by ``_id`` (upsert).
+
+        Returns the number of documents written. Bodies are copied as raw BSON
+        so archive collections stay byte-identical to the hot source.
+        """
+        ops: list[ReplaceOne] = []
+        written = 0
+
+        async for doc in self._collection.find({}):
+            ops.append(ReplaceOne({"_id": doc["_id"]}, doc, upsert=True))
+            if len(ops) >= batch_size:
+                await dest._collection.bulk_write(list(ops), ordered=False)
+                written += len(ops)
+                ops.clear()
+
+        if ops:
+            await dest._collection.bulk_write(list(ops), ordered=False)
+            written += len(ops)
+
+        return written
 
     async def find(self, **eq: object) -> AsyncIterator[ModelT]:
         query = self._to_mongo(eq) if eq else {}

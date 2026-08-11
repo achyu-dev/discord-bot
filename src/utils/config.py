@@ -19,11 +19,23 @@ class Config:
     # The bot only ever runs on a single guild, so this is a constant.
     GUILD_ID = 742797665301168220
 
-    # Per-environment settings keyed by APP_ENV. All share one cluster for now.
+    # Different clusters, same DB name.
+    DB_NAME = "discord"
+
+    # Per-APP_ENV settings (command prefix + Atlas cluster).
     ENVIRONMENTS = {
-        "prod": {"prefix": "!", "db_name": "pesu_v2"},
-        "dev": {"prefix": "$", "db_name": "pesu_v2"},
-        "local": {"prefix": "?", "db_name": "pesu_v2"},
+        "prod": {
+            "prefix": "!",
+            "mongo_uri": "mongodb+srv://pesudev.nkzgere.mongodb.net/",
+        },
+        "dev": {
+            "prefix": "$",
+            "mongo_uri": "mongodb+srv://pesudev.andmjbp.mongodb.net/",
+        },
+        "local": {
+            "prefix": "?",
+            "mongo_uri": "mongodb+srv://pesudev.andmjbp.mongodb.net/",
+        },
     }
 
     ROLES = {
@@ -60,6 +72,9 @@ class Config:
     # PESU Academy auth service (used by /link).
     PESU_AUTH_URL = "https://pesu-auth.onrender.com/authenticate"
 
+    # AskPESU API (used by /ask).
+    ASKPESU_API = "https://pesu-dev-askpesu.hf.space/ask"
+
     # Channel IDs
     CHANNELS = {
         "BOT_LOGS": 786084620944146504,
@@ -69,25 +84,27 @@ class Config:
         "LOBBY": 860224115633160203,
         "VERIFICATION_LOGS": 1100722146956820510,
         "ERROR_LOGS": 1129317221848596490,
+        "ASK_A_SENIOR": 1231605098983985156,  # thread
+        "ACCESS_HELP": 742956204753551440,
         "HONEYPOT": 1525332571674902738,
     }
 
     @staticmethod
-    def resolve_env() -> tuple[str, str, str]:
-        """Resolve (env, prefix, db_name) from APP_ENV. Fails fast on invalid values."""
-        env = os.getenv("APP_ENV")
+    def resolve_env() -> tuple[str, str]:
+        """Resolve (env, prefix) from APP_ENV (defaults to local). Fails fast on invalid values."""
+        env = os.getenv("APP_ENV", "local")
         if env not in Config.ENVIRONMENTS:
             valid = ", ".join(Config.ENVIRONMENTS)
             raise ValueError(f"APP_ENV must be one of [{valid}], got {env!r}")
-        settings = Config.ENVIRONMENTS[env]
-        return env, settings["prefix"], settings["db_name"]
+        return env, Config.ENVIRONMENTS[env]["prefix"]
 
-    def __init__(self, bot: DiscordBot, *, env: str, db_name: str) -> None:
+    def __init__(self, bot: DiscordBot, *, env: str) -> None:
         """Initialize with bot instance and resolved environment settings."""
         self.bot = bot
         self.guild_id = self.GUILD_ID
         self.env = env
-        self.db_name = db_name
+        self.db_name = self.DB_NAME
+        self.mongo_uri = self.ENVIRONMENTS[env]["mongo_uri"]
 
     @property
     def guild(self) -> discord.Guild:
