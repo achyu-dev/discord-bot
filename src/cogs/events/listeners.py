@@ -230,7 +230,7 @@ class EventListeners(EventHelpers):
 
             return
 
-        if random.random() <= 0.2:  # 20% chance and prod deployment
+        if random.random() <= 0.2:  # 20% chance
             # Special EC Campus keyword patterns. Only check for words, not internal matches
             patterns = [r"\becc\b", r"\bec campus\b", r"\bec\b"]
             # Normalize message content to handle case insensitive matches
