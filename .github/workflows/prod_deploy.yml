@@ -58,9 +58,20 @@ jobs:
           echo "image_tag=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
           echo "has_changes=${HAS_CHANGES}" >> "$GITHUB_OUTPUT"
 
+  await_approval:
+    name: Await production approval
+    needs: [resolve_target]
+    if: needs.resolve_target.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    environment: prod-promote
+    steps:
+      - name: Production promotion approved
+        run: |
+          echo "Approved promotion of ${{ needs.resolve_target.outputs.target_sha }} to production."
+
   sync_guild_commands:
     name: Sync guild commands (prod)
-    needs: [resolve_target]
+    needs: [resolve_target, await_approval]
     if: needs.resolve_target.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     environment: prod
