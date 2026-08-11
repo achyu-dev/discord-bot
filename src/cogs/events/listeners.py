@@ -167,10 +167,7 @@ class EventListeners(EventHelpers):
         if message.author.bot:
             return
 
-        if (
-            message.channel.id == self.client.config.honeypot_channel.id
-            and isinstance(message.author, discord.Member)
-        ):
+        if message.channel.id == self.client.config.honeypot_channel.id and isinstance(message.author, discord.Member):
             try:
                 await message.delete()
             except (discord.Forbidden, discord.NotFound):
@@ -201,10 +198,7 @@ class EventListeners(EventHelpers):
                     title="Honeypot Triggered",
                     color=discord.Color.red(),
                     timestamp=discord.utils.utcnow(),
-                    description=(
-                        f"{message.author.mention} got trapped in "
-                        f"{message.channel.mention}"
-                    ),
+                    description=(f"{message.author.mention} got trapped in {message.channel.mention}"),
                     fields=[
                         {
                             "name": "Action",
@@ -213,19 +207,13 @@ class EventListeners(EventHelpers):
                         },
                         {
                             "name": "Message",
-                            "value": (
-                                message.content
-                                if message.content
-                                else "*No content*"
-                            ),
+                            "value": (message.content if message.content else "*No content*"),
                             "inline": False,
                         },
                     ],
                 )
 
-                await self.client.config.mod_logs_channel.send(
-                    embed=trap_embed
-                )
+                await self.client.config.mod_logs_channel.send(embed=trap_embed)
 
             except discord.Forbidden:
                 await self.client.config.mod_logs_channel.send(
@@ -237,8 +225,7 @@ class EventListeners(EventHelpers):
 
             except discord.HTTPException as exc:
                 await self.client.config.mod_logs_channel.send(
-                    f"Failed honeypot action for "
-                    f"{message.author.mention}: {exc}"
+                    f"Failed honeypot action for {message.author.mention}: {exc}"
                 )
 
             return
