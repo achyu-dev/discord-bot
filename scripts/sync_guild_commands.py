@@ -206,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     changed.add_argument("--base", required=True, help="Base git ref (previously deployed commit)")
     changed.add_argument("--head", required=True, help="Head git ref (commit being deployed)")
-    sub.add_parser("sync", help="Sync guild commands to Discord (requires BOT_TOKEN and APP_ENV).")
+    sub.add_parser("sync", help="Sync guild commands to Discord (requires BOT_TOKEN).")
 
     args = parser.parse_args(argv)
     if args.command == "changed":

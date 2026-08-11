@@ -117,14 +117,15 @@ This section provides instructions for setting up your development environment t
 
    ```env
    BOT_TOKEN=""
-   APP_ENV=""
+   # Optional; one of: prod, dev, local. Defaults to local when unset.
+   # APP_ENV="local"
    # Optional; defaults to scratch/mongo-dev.pem
    # MONGO_X509_CERT_PATH="/absolute/path/to/your-cert.pem"
    ```
 
    Replace the placeholder values with your actual credentials:
    - `BOT_TOKEN`: Discord bot token
-   - `APP_ENV`: Environment name (must be one of `prod`, `dev`, or `local`)
+   - `APP_ENV`: Optional environment name (`prod`, `dev`, or `local`). Defaults to `local` when unset.
    - `MONGO_X509_CERT_PATH`: path to your Atlas X.509 client certificate (`.pem`).
      Defaults to `scratch/mongo-dev.pem` when unset.
 

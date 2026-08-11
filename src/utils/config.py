@@ -90,8 +90,8 @@ class Config:
 
     @staticmethod
     def resolve_env() -> tuple[str, str]:
-        """Resolve (env, prefix) from APP_ENV. Fails fast on invalid values."""
-        env = os.getenv("APP_ENV")
+        """Resolve (env, prefix) from APP_ENV (defaults to local). Fails fast on invalid values."""
+        env = os.getenv("APP_ENV", "local")
         if env not in Config.ENVIRONMENTS:
             valid = ", ".join(Config.ENVIRONMENTS)
             raise ValueError(f"APP_ENV must be one of [{valid}], got {env!r}")

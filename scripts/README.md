@@ -10,7 +10,7 @@ decorators), and syncs the cog command tree to Discord.
 # Compare two git refs (exit 0 = unchanged, exit 1 = surface changed)
 uv run scripts/sync_guild_commands.py changed --base <old-sha> --head <new-sha>
 
-# Push current commands to Discord (requires BOT_TOKEN and APP_ENV)
+# Push current commands to Discord (requires BOT_TOKEN)
 uv run scripts/sync_guild_commands.py sync
 ```
 

@@ -15,6 +15,13 @@ def test_resolve_env_local(monkeypatch: pytest.MonkeyPatch) -> None:
     assert prefix == "?"
 
 
+def test_resolve_env_defaults_to_local_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("APP_ENV", raising=False)
+    env, prefix = Config.resolve_env()
+    assert env == "local"
+    assert prefix == "?"
+
+
 def test_resolve_env_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "staging")
     with pytest.raises(ValueError, match="APP_ENV"):
