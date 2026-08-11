@@ -116,15 +116,17 @@ This section provides instructions for setting up your development environment t
    Open the `src/.env` file and add the following variables (see `src/.env.example` for a template):
 
    ```env
-   MONGO_URI=""
    BOT_TOKEN=""
    APP_ENV=""
+   # Optional; defaults to scratch/mongo-dev.pem
+   # MONGO_X509_CERT_PATH="/absolute/path/to/your-cert.pem"
    ```
 
    Replace the placeholder values with your actual credentials:
-   - `MONGO_URI`: MongoDB connection string
    - `BOT_TOKEN`: Discord bot token
    - `APP_ENV`: Environment name (must be one of `prod`, `dev`, or `local`)
+   - `MONGO_X509_CERT_PATH`: path to your Atlas X.509 client certificate (`.pem`).
+     Defaults to `scratch/mongo-dev.pem` when unset.
 
 ### Database Setup
 

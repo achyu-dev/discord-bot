@@ -22,11 +22,20 @@ class Config:
     # Different clusters, same DB name.
     DB_NAME = "discord"
 
-    # Command prefix keyed by APP_ENV.
+    # Per-APP_ENV settings (command prefix + Atlas cluster).
     ENVIRONMENTS = {
-        "prod": "!",
-        "dev": "$",
-        "local": "?",
+        "prod": {
+            "prefix": "!",
+            "mongo_uri": "mongodb+srv://pesudev.nkzgere.mongodb.net/",
+        },
+        "dev": {
+            "prefix": "$",
+            "mongo_uri": "mongodb+srv://pesudev.andmjbp.mongodb.net/",
+        },
+        "local": {
+            "prefix": "?",
+            "mongo_uri": "mongodb+srv://pesudev.andmjbp.mongodb.net/",
+        },
     }
 
     ROLES = {
@@ -86,7 +95,7 @@ class Config:
         if env not in Config.ENVIRONMENTS:
             valid = ", ".join(Config.ENVIRONMENTS)
             raise ValueError(f"APP_ENV must be one of [{valid}], got {env!r}")
-        return env, Config.ENVIRONMENTS[env]
+        return env, Config.ENVIRONMENTS[env]["prefix"]
 
     def __init__(self, bot: DiscordBot, *, env: str) -> None:
         """Initialize with bot instance and resolved environment settings."""
@@ -94,6 +103,7 @@ class Config:
         self.guild_id = self.GUILD_ID
         self.env = env
         self.db_name = self.DB_NAME
+        self.mongo_uri = self.ENVIRONMENTS[env]["mongo_uri"]
 
     @property
     def guild(self) -> discord.Guild:

@@ -41,21 +41,21 @@ class DiscordBot(commands.Bot):
         self.start_time: float = time.time()
 
     async def init_db(self) -> None:
-        """Connect to MongoDB and wire up typed collection stores."""
+        """Connect to MongoDB via Atlas X.509 and wire up typed collection stores."""
         try:
-            client_kwargs: dict[str, object] = {"tz_aware": True}
-            cert_path = os.environ.get("MONGO_X509_CERT_PATH")
-            if cert_path:
-                client_kwargs["tls"] = True
-                client_kwargs["tlsCertificateKeyFile"] = cert_path
-                client_kwargs["authSource"] = "$external"
-                client_kwargs["authMechanism"] = "MONGODB-X509"
-            self.mongo = AsyncMongoClient(os.environ["MONGO_URI"], **client_kwargs)
+            self.mongo = AsyncMongoClient(
+                self.config.mongo_uri,
+                tz_aware=True,
+                tls=True,
+                tlsCertificateKeyFile=os.getenv("MONGO_X509_CERT_PATH", "scratch/mongo-dev.pem"),
+                authSource="$external",
+                authMechanism="MONGODB-X509",
+            )
             db = self.mongo[self.config.db_name]
             self.stores = await Stores.create(db)
             self.logger.info(f"Connected to MongoDB ({self.config.db_name})")
-        except Exception as e:
-            self.logger.info(f"Failed to connect to MongoDB: {e}")
+        except Exception:
+            self.logger.error("Failed to connect to MongoDB", exc_info=True)
 
     async def load_cogs(self) -> None:
         """Load every cog module or package in the cogs directory."""

@@ -15,7 +15,7 @@ from src.data.mongo import Link, Student
 
 # Ensure Config.resolve_env / bot init never require a real .env during tests.
 os.environ.setdefault("APP_ENV", "local")
-os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017")
+os.environ.setdefault("MONGO_X509_CERT_PATH", "/nonexistent/test-mongo.pem")
 os.environ.setdefault("BOT_TOKEN", "test-token-not-real")
 
 type RoleFactory = Callable[..., MagicMock]

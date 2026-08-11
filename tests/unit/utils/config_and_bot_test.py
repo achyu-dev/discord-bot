@@ -27,6 +27,9 @@ def test_config_guild_object() -> None:
     assert config.guild_object.id == Config.GUILD_ID
     assert config.db_name == Config.DB_NAME
     assert Config.DB_NAME == "discord"
+    assert config.mongo_uri == Config.ENVIRONMENTS["local"]["mongo_uri"]
+    assert config.mongo_uri == Config.ENVIRONMENTS["dev"]["mongo_uri"]
+    assert Config.ENVIRONMENTS["prod"]["mongo_uri"] != Config.ENVIRONMENTS["dev"]["mongo_uri"]
 
 
 def test_config_get_role_and_channel() -> None:
@@ -55,36 +58,6 @@ def test_config_guild_missing() -> None:
 
 async def test_bot_init_db_success(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "local")
-    monkeypatch.setenv("MONGO_URI", "mongodb://example")
-    monkeypatch.delenv("MONGO_X509_CERT_PATH", raising=False)
-
-    def _fake_collection(_name: str) -> MagicMock:
-        coll = MagicMock()
-        coll.create_index = AsyncMock(return_value="idx")
-        return coll
-
-    fake_db = MagicMock()
-    fake_db.__getitem__ = MagicMock(side_effect=_fake_collection)
-    fake_client = MagicMock()
-    fake_client.__getitem__ = MagicMock(return_value=fake_db)
-
-    with patch("src.bot.AsyncMongoClient", return_value=fake_client) as client_cls:
-        from src.bot import DiscordBot
-
-        bot = DiscordBot()
-        await bot.init_db()
-        client_cls.assert_called_once_with("mongodb://example", tz_aware=True)
-        assert bot.mongo is fake_client
-        assert bot.stores is not None
-        assert bot.stores.links is not None
-        assert bot.stores.mutes is not None
-        assert bot.stores.anon_bans is not None
-        assert bot.stores.anon_mutes is not None
-
-
-async def test_bot_init_db_x509(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("APP_ENV", "local")
-    monkeypatch.setenv("MONGO_URI", "mongodb+srv://example.mongodb.net/")
     monkeypatch.setenv("MONGO_X509_CERT_PATH", "/run/secrets/mongo.pem")
 
     def _fake_collection(_name: str) -> MagicMock:
@@ -103,7 +76,7 @@ async def test_bot_init_db_x509(monkeypatch: pytest.MonkeyPatch) -> None:
         bot = DiscordBot()
         await bot.init_db()
         client_cls.assert_called_once_with(
-            "mongodb+srv://example.mongodb.net/",
+            Config.ENVIRONMENTS["local"]["mongo_uri"],
             tz_aware=True,
             tls=True,
             tlsCertificateKeyFile="/run/secrets/mongo.pem",
@@ -111,17 +84,22 @@ async def test_bot_init_db_x509(monkeypatch: pytest.MonkeyPatch) -> None:
             authMechanism="MONGODB-X509",
         )
         assert bot.mongo is fake_client
+        assert bot.stores is not None
+        assert bot.stores.links is not None
+        assert bot.stores.mutes is not None
+        assert bot.stores.anon_bans is not None
+        assert bot.stores.anon_mutes is not None
 
 
 async def test_bot_init_db_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "local")
-    monkeypatch.delenv("MONGO_URI", raising=False)
+    monkeypatch.setenv("MONGO_X509_CERT_PATH", "/run/secrets/mongo.pem")
 
     from src.bot import DiscordBot
 
     bot = DiscordBot()
-    # Missing MONGO_URI raises KeyError caught by broad except
-    await bot.init_db()
+    with patch("src.bot.AsyncMongoClient", side_effect=RuntimeError("fail")):
+        await bot.init_db()
     assert bot.mongo is None
 
 

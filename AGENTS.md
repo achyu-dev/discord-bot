@@ -111,7 +111,7 @@ When adding a new cog package, ensure `scripts/check_cog_imports.py` still passe
 
 ### Never
 
-- Commit `BOT_TOKEN`, `MONGO_URI`, or other credentials
+- Commit `BOT_TOKEN`, X.509 `.pem` certs, or other secrets
 - Use relative imports inside `src/`
 - Bypass hooks with `--no-verify`
 - Force-push to `main` / `dev`
