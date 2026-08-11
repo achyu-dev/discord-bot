@@ -375,6 +375,8 @@ def test_config_role_channel_properties() -> None:
     assert Config.ASKPESU_API == "https://pesu-dev-askpesu.hf.space/ask"
     assert Config.CHANNELS["VERIFICATION_LOGS"] == 1100722146956820510
     assert Config.CHANNELS["ERROR_LOGS"] == 1129317221848596490
+    assert Config.CHANNELS["ASK_A_SENIOR"] == 1231605098983985156
+    assert Config.CHANNELS["ACCESS_HELP"] == 742956204753551440
     assert "ADDITIONAL_ROLES" not in Config.CHANNELS
 
 

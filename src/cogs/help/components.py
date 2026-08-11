@@ -44,6 +44,7 @@ HELP_PAGES: dict[str, tuple[str, list[dict]]] = {
             {"name": "Echo a Message", "value": "`/echo`"},
             {"name": "Link Info", "value": "`/mod link info`"},
             {"name": "Disconnect a User's Link", "value": "`/mod link disconnect`"},
+            {"name": "Link Reminder", "value": "`/mod link remind`"},
             {"name": "Mute a User", "value": "`/mod mute`"},
             {"name": "Unmute a User", "value": "`/mod unmute`"},
             {"name": "Purge Messages", "value": "`/mod purge`"},

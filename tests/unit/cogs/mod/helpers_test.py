@@ -195,6 +195,62 @@ async def test_mod_link_disconnect_strips_roles(
     interaction.followup.send.assert_awaited()
 
 
+def _wire_link_remind_channels(mock_bot: MagicMock) -> tuple[MagicMock, MagicMock, MagicMock]:
+    ask_a_senior = MagicMock(spec=discord.Thread)
+    ask_a_senior.mention = "<#ask-a-senior>"
+    ask_a_senior.send = AsyncMock()
+    welcome = MagicMock(spec=discord.TextChannel)
+    welcome.mention = "<#welcome>"
+    access_help = MagicMock(spec=discord.TextChannel)
+    access_help.mention = "<#access-help>"
+    mock_bot.config.just_joined_role.mention = "<@&just-joined>"
+
+    def get_channel(name: str) -> MagicMock:
+        return {"ASK_A_SENIOR": ask_a_senior, "WELCOME": welcome, "ACCESS_HELP": access_help}[name]
+
+    mock_bot.config.get_channel = MagicMock(side_effect=get_channel)
+    return ask_a_senior, welcome, access_help
+
+
+async def test_mod_link_remind_defaults_to_ask_a_senior(
+    mock_bot: MagicMock, interaction_factory: InteractionFactory
+) -> None:
+    commands = LinkCommands()
+    commands.client = mock_bot
+    ask_a_senior, welcome, access_help = _wire_link_remind_channels(mock_bot)
+    interaction = interaction_factory()
+
+    await get_callback(commands.mod_link_remind)(commands, interaction, None)
+
+    content = ask_a_senior.send.await_args.kwargs["content"]
+    assert mock_bot.config.just_joined_role.mention in content
+    assert welcome.mention in content
+    assert access_help.mention in content
+    assert "temporary channel that will be shut down" in content
+    interaction.followup.send.assert_awaited_once()
+    assert "Reminder sent" in interaction.followup.send.await_args.kwargs["content"]
+    assert ask_a_senior.mention in interaction.followup.send.await_args.kwargs["content"]
+
+
+async def test_mod_link_remind_uses_target_channel(
+    mock_bot: MagicMock, interaction_factory: InteractionFactory
+) -> None:
+    commands = LinkCommands()
+    commands.client = mock_bot
+    _wire_link_remind_channels(mock_bot)
+    target = MagicMock(spec=discord.TextChannel)
+    target.mention = "<#custom>"
+    target.send = AsyncMock()
+    interaction = interaction_factory()
+
+    await get_callback(commands.mod_link_remind)(commands, interaction, target)
+
+    target.send.assert_awaited_once()
+    ask_a_senior = mock_bot.config.get_channel("ASK_A_SENIOR")
+    ask_a_senior.send.assert_not_awaited()
+    assert target.mention in interaction.followup.send.await_args.kwargs["content"]
+
+
 def _expired_mute(*, mute_id: ObjectId, user_id: int, channel_id: int) -> Mute:
     now = datetime.now(UTC)
     return Mute(

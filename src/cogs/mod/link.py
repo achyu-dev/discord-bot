@@ -77,3 +77,40 @@ class LinkCommands:
             return
 
         await interaction.followup.send(content=f"Disconnected {user.mention}")
+
+    @ModGroups.mod_link.command(
+        name="remind",
+        description="Post a PESU linking reminder to Ask a Senior (or another channel)",
+    )
+    @app_commands.describe(target_channel="Channel or thread to post in (default: Ask a Senior)")
+    @bot_decorators.defer(ephemeral=True)
+    @bot_decorators.requires_location(bot_decorators.CommandLocation.GUILD)
+    @bot_decorators.requires_roles(
+        bot_decorators.FunctionalRole.ADMIN,
+        bot_decorators.FunctionalRole.MOD,
+        bot_decorators.FunctionalRole.JUNIOR_MOD,
+    )
+    @bot_decorators.handle_command_errors(
+        not_found="The specified channel does not exist",
+        forbidden="I do not have permission to send messages in that channel",
+    )
+    async def mod_link_remind(
+        self,
+        interaction: discord.Interaction,
+        target_channel: discord.TextChannel | discord.Thread | None = None,
+    ) -> None:
+        channel = target_channel or self.client.config.get_channel("ASK_A_SENIOR")
+        just_joined = self.client.config.just_joined_role
+        welcome = self.client.config.get_channel("WELCOME")
+        access_help = self.client.config.get_channel("ACCESS_HELP")
+
+        message = (
+            f"Hi {just_joined.mention}, friendly reminder: Authenticate using your PESU credentials "
+            "to gain access to the rest of the server. This channel is public. Authentication "
+            "restricts access to outsiders and protects your identity and conversations. "
+            "This is a temporary channel that will be shut down after admissions end. "
+            f"Instructions to authenticate can be found in {welcome.mention}. "
+            f"If you are facing errors, reach out to the mods in {access_help.mention}."
+        )
+        await channel.send(content=message)
+        await interaction.followup.send(content=f"Reminder sent to {channel.mention}", ephemeral=True)
