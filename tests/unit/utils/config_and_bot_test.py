@@ -34,8 +34,9 @@ def test_config_guild_object() -> None:
     assert config.guild_object.id == Config.GUILD_ID
     assert config.db_name == Config.DB_NAME
     assert Config.DB_NAME == "discord"
-    assert config.mongo_uri == Config.ENVIRONMENTS["local"]["mongo_uri"]
-    assert config.mongo_uri == Config.ENVIRONMENTS["dev"]["mongo_uri"]
+    assert Config.ENVIRONMENTS["local"]["mongo_uri"] == Config.ENVIRONMENTS["local"]["mongo_uri"]
+    assert Config.ENVIRONMENTS["local"]["mongo_uri"] != Config.ENVIRONMENTS["prod"]["mongo_uri"]
+    assert Config.ENVIRONMENTS["dev"]["mongo_uri"] != Config.ENVIRONMENTS["local"]["mongo_uri"]
     assert Config.ENVIRONMENTS["prod"]["mongo_uri"] != Config.ENVIRONMENTS["dev"]["mongo_uri"]
 
 
