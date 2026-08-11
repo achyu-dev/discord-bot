@@ -34,7 +34,7 @@ class Config:
         },
         "local": {
             "prefix": "?",
-            "mongo_uri": "mongodb+srv://achyugeorge7744:ROvmG7CZVOTPnruY@cluster0.gslcfai.mongodb.net/",
+            "mongo_uri": "mongodb+srv://pesudev.andmjbp.mongodb.net/",
         },
     }
 
