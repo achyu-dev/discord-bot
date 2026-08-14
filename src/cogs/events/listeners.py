@@ -10,6 +10,7 @@ from discord.ext import commands
 
 from src.cogs.events.helpers import EventHelpers
 from src.utils import decorators as bot_decorators
+from src.utils import general as ug
 from src.utils.general import build_embed
 
 if TYPE_CHECKING:
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
 class EventListeners(EventHelpers):
     client: DiscordBot
+    HONEYPOT_ACTION = "kick"  # allowed: kick | ban | timeout
 
     @commands.Cog.listener()
     @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
@@ -73,6 +75,69 @@ class EventListeners(EventHelpers):
     @bot_decorators.requires_env(bot_decorators.AppEnvironment.PROD)
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot:
+            return
+
+        if message.channel.id == self.client.config.honeypot_channel.id and isinstance(message.author, discord.Member):
+            try:
+                await message.delete()
+            except (discord.Forbidden, discord.NotFound):
+                pass
+
+            # Keep existing moderation guardrails (admin/mod/bots protected).
+            target_error = ug.mod_target_error(
+                message.author,
+                self.client.config,
+            )
+
+            if target_error is not None:
+                await self.client.config.mod_logs_channel.send(
+                    f"Honeypot triggered by protected user "
+                    f"{message.author.mention}; skipped auto-action. "
+                    f"Reason: {target_error}"
+                )
+                return
+
+            try:
+                action_text = await self._apply_honeypot_action(
+                    message.author,
+                    message,
+                )
+                await self._update_fafo_banner()
+
+                trap_embed = build_embed(
+                    title="Honeypot Triggered",
+                    color=discord.Color.red(),
+                    timestamp=discord.utils.utcnow(),
+                    description=(f"{message.author.mention} got trapped in {message.channel.mention}"),
+                    fields=[
+                        {
+                            "name": "Action",
+                            "value": action_text,
+                            "inline": True,
+                        },
+                        {
+                            "name": "Message",
+                            "value": (message.content if message.content else "*No content*"),
+                            "inline": False,
+                        },
+                    ],
+                )
+
+                await self.client.config.mod_logs_channel.send(embed=trap_embed)
+
+            except discord.Forbidden:
+                await self.client.config.mod_logs_channel.send(
+                    f"Failed honeypot action for "
+                    f"{message.author.mention}: "
+                    "missing permissions/role hierarchy "
+                    "(kick/ban/timeout and/or FAFO banner update)."
+                )
+
+            except discord.HTTPException as exc:
+                await self.client.config.mod_logs_channel.send(
+                    f"Failed honeypot action for {message.author.mention}: {exc}"
+                )
+
             return
 
         if random.random() <= 0.2:  # 20% chance
