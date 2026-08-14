@@ -147,7 +147,7 @@ class EventListeners(EventHelpers):
         dm_embed = build_embed(
             title="You have been removed",
             color=discord.Color.red(),
-                description=(
+            description=(
                 f"You were removed from **{member.guild.name}** for triggering "
                 "the honeypot channel.\n\n"
                 "Rejoin the server with this link: "
