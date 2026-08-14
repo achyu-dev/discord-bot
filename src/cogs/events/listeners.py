@@ -147,7 +147,12 @@ class EventListeners(EventHelpers):
         dm_embed = build_embed(
             title="You have been removed",
             color=discord.Color.red(),
-            description=f"You were removed from **{member.guild.name}** for triggering the honeypot channel.",
+                description=(
+                f"You were removed from **{member.guild.name}** for triggering "
+                "the honeypot channel.\n\n"
+                "Rejoin the server with this link: "
+                "https://discord.gg/eZ3uFs2"
+            ),
         )
         await ug.send_dm_safely(member, embed=dm_embed)
 
